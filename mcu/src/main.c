@@ -82,103 +82,133 @@ float readTemperatureSPI(uint8_t msb, uint8_t lsb){
 // Read temperature from DS1722 via SPI based on requested resolution
 float updateTemperature(char request[]) {
     if (inString(request, "8bit") == 1) {
-        digitalWrite(PB3, 1);
-        spiSendReceive(0x80);
-        spiSendReceive(0b11100000);
-        digitalWrite(PB3, 0);
+        digitalWrite(CS, PIO_HIGH);
+        spiSendReceive(SPI1, 0x80);
+        spiSendReceive(SPI1, 0b11100000);
+        digitalWrite(CS, PIO_LOW);
     } else if (inString(request, "9bit") == 1) {
-        digitalWrite(PB3, 1);
-        spiSendReceive(0x80);
-        spiSendReceive(0b11100010);
-        digitalWrite(PB3, 0);
+        digitalWrite(CS, PIO_HIGH);
+        spiSendReceive(SPI1, 0x80);
+        spiSendReceive(SPI1, 0b11100010);
+        digitalWrite(CS, PIO_LOW);
     } else if (inString(request, "10bit") == 1) {
-        digitalWrite(PB3, 1);
-        spiSendReceive(0x80);
-        spiSendReceive(0b11100100);
-        digitalWrite(PB3, 0);
+        digitalWrite(CS, PIO_HIGH);
+        spiSendReceive(SPI1, 0x80);
+        spiSendReceive(SPI1, 0b11100100);
+        digitalWrite(CS, PIO_LOW);
     } else if (inString(request, "11bit") == 1) {
-        digitalWrite(PB3, 1);
-        spiSendReceive(0x80);
-        spiSendReceive(0b11100110);
-        digitalWrite(PB3, 0);
+        digitalWrite(CS, PIO_HIGH);
+        spiSendReceive(SPI1, 0x80);
+        spiSendReceive(SPI1, 0b11100110);
+        digitalWrite(CS, PIO_LOW);
     } else if (inString(request, "12bit") == 1) {
-        digitalWrite(PB3, 1);
-        spiSendReceive(0x80);
-        spiSendReceive(0b11101000);
-        digitalWrite(PB3, 0);
+        digitalWrite(CS, PIO_HIGH);
+        spiSendReceive(SPI1, 0x80);
+        spiSendReceive(SPI1, 0b11101000);
+        digitalWrite(CS, PIO_LOW);
     }
     // Read temperature bits
-    digitalWrite(PB3, 1);
-    spiSendReceive(0x01);
-    uint8_t msb = spiSendReceive(0x00);
-    digitalWrite(PB3, 0);
+    digitalWrite(CS, PIO_HIGH);
+    spiSendReceive(SPI1, 0x01);
+    uint8_t msb = spiSendReceive(SPI1, 0x00);
+    digitalWrite(CS, PIO_LOW);
 
-    digitalWrite(PB3, 1);
-    spiSendReceive(0x02);
-    uint8_t lsb = spiSendReceive(0x00);
-    digitalWrite(PB3, 0);
+    digitalWrite(CS, PIO_HIGH);
+    spiSendReceive(SPI1, 0x02);
+    uint8_t lsb = spiSendReceive(SPI1, 0x00);
+    digitalWrite(CS, PIO_LOW);
 
     return readTemperatureSPI(msb, lsb); // return temperature as float
 };
 
 int main(void) {
-  configureFlash();
-  configureClock();
+    configureFlash();
+    configureClock();
 
-  gpioEnable(GPIO_PORT_A);
-  gpioEnable(GPIO_PORT_B);
-  gpioEnable(GPIO_PORT_C);
+    gpioEnable(GPIO_PORT_A);
+    gpioEnable(GPIO_PORT_B);
+    gpioEnable(GPIO_PORT_C);
 
-  pinMode(PB3, GPIO_OUTPUT);
-  
-  RCC->APB2ENR |= (RCC_APB2ENR_TIM15EN);
-  initTIM(TIM15);
-  
-  USART_TypeDef * USART = initUSART(USART1_ID, 125000);
+    pinMode(LED_PIN, GPIO_OUTPUT);
+    
+    RCC->APB2ENR |= (RCC_APB2ENR_TIM15EN);
+    initTIM(TIM15);
+    
+    USART_TypeDef * USART = initUSART(USART1_ID, 125000);
 
-  // TODO: Add SPI initialization code
+    ////////////////////// SPI initialization/config code /////////////////////////////////////////////
+    // Enable GPIO Pins
+    pinMode(SCK, GPIO_ALT);
+    pinMode(MOSI, GPIO_ALT);
+    pinMode(MISO, GPIO_ALT);
+    pinMode(CS, GPIO_OUTPUT);
 
-  while(1) {
-    /* Wait for ESP8266 to send a request.
-    Requests take the form of '/REQ:<tag>\n', with TAG begin <= 10 characters.
-    Therefore the request[] array must be able to contain 18 characters.
-    */
+    digitalWrite(CS, PIO_LOW);
 
-    // Receive web request from the ESP
-    char request[BUFF_LEN] = "                  "; // initialize to known value
-    int charIndex = 0;
-  
-    // Keep going until you get end of line character
-    while(inString(request, "\n") == -1) {
-      // Wait for a complete request to be transmitted before processing
-      while(!(USART->ISR & USART_ISR_RXNE));
-      request[charIndex++] = readChar(USART);
+    // Configure alternate function
+    GPIOA->AFR[0] &= ~((0xF << GPIO_AFRL_AFSEL5_Pos) | (0xF << GPIO_AFRL_AFSEL6_Pos));
+    GPIOA->AFR[1] &= ~(0xF << GPIO_AFRH_AFSEL12_Pos);
+    GPIOA->AFR[0] |=  (0b0101 << GPIO_AFRL_AFSEL5_Pos) | (0b0101 << GPIO_AFRL_AFSEL6_Pos);
+    GPIOA->AFR[1] |=  (0b0101 << GPIO_AFRH_AFSEL12_Pos); 
+
+    enableSPI(SPI1);
+    initSPI(SPI1, 255, 0, 1); 
+
+    // Configure DS1722 SPI connection
+    digitalWrite(CS, PIO_HIGH);
+    spiSendReceive(SPI1, 0x80);
+    spiSendReceive(SPI1, 0xE8);
+    digitalWrite(CS, PIO_LOW);
+
+    while(1) {
+        /* Wait for ESP8266 to send a request.
+        Requests take the form of '/REQ:<tag>\n', with TAG begin <= 10 characters.
+        Therefore the request[] array must be able to contain 18 characters.
+        */
+        
+        // Receive web request from the ESP
+        char request[BUFF_LEN] = "                  "; // initialize to known value
+        int charIndex = 0;
+        
+        // Keep going until you get end of line character
+        while(inString(request, "\n") == -1) {
+          // Wait for a complete request to be transmitted before processing
+          while(!(USART->ISR & USART_ISR_RXNE));
+          request[charIndex++] = readChar(USART);
+        }
+      
+        /////////////////////////////// SPI temperature reading code /////////////////////////////////////////
+        // Record ambient temperature
+        float ambTemp = updateTemperature(request);
+        char tempReq [BUFF_LEN];
+
+        sprintf(tempReq, "The ambient temperature is: %f°C\n", ambTemp);
+      
+        // Update string with current LED state
+      
+        int led_status = updateLEDStatus(request);
+      
+        char ledStatusStr[20];
+        if (led_status == 1)
+          sprintf(ledStatusStr,"LED is on!");
+        else if (led_status == 0)
+          sprintf(ledStatusStr,"LED is off!");
+      
+        // finally, transmit the webpage over UART
+        sendString(USART, webpageStart); // webpage header code
+        sendString(USART, ledStr); // button for controlling LED
+      
+        sendString(USART, "<h2>LED Status</h2>");
+        sendString(USART, "<p>");
+        sendString(USART, ledStatusStr);
+        sendString(USART, "</p>");
+
+        sendString(USART, "<h2>Ambient Temperature</h2>");
+        sendString(USART, tempPageForm);
+        sendString(USART, "<p>");
+        sendString(USART, tempReq);
+        sendString(USART, "</p>");
+
+        sendString(USART, webpageEnd);
     }
-
-    // TODO: Add SPI code here for reading temperature
-  
-    // Update string with current LED state
-  
-    int led_status = updateLEDStatus(request);
-
-    char ledStatusStr[20];
-    if (led_status == 1)
-      sprintf(ledStatusStr,"LED is on!");
-    else if (led_status == 0)
-      sprintf(ledStatusStr,"LED is off!");
-
-    // finally, transmit the webpage over UART
-    sendString(USART, webpageStart); // webpage header code
-    sendString(USART, ledStr); // button for controlling LED
-
-    sendString(USART, "<h2>LED Status</h2>");
-
-
-    sendString(USART, "<p>");
-    sendString(USART, ledStatusStr);
-    sendString(USART, "</p>");
-
-  
-    sendString(USART, webpageEnd);
-  }
 }

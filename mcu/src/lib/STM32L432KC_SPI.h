@@ -1,8 +1,8 @@
 // STM32L432KC_SPI.h
-// TODO: <YOUR NAME>
-// TODO: <YOUR EMAIL>
-// TODO: <DATE>
-// TODO: <SHORT DESCRIPTION OF WHAT THIS FILE DOES>
+// Josaphat Ngoga
+// jngoga@g.hmc.edu
+// 17/10/2025
+// Header file for SPI functions for MCU
 
 #ifndef STM32L4_SPI_H
 #define STM32L4_SPI_H
@@ -20,11 +20,15 @@
  *    -- cpha: clock phase (0: data captured on leading edge of clk and changed on next edge, 
  *          1: data changed on leading edge of clk and captured on next edge)
  * Refer to the datasheet for more low-level details. */ 
-void initSPI(int br, int cpol, int cpha);
+void initSPI(SPI_TypeDef* SPIx, int br, int cpol, int cpha);
 
 /* Transmits a character (1 byte) over SPI and returns the received character.
  *    -- send: the character to send over SPI
  *    -- return: the character received over SPI */
-char spiSendReceive(char send);
+char spiSendReceive(SPI_TypeDef* SPIx, char send);
+
+/* Enables the clock for the specified SPI peripheral: SPI1 (APB2 peripheral) or SPI3(APB1 peripheral).
+ *    -- SPI: pointer to the SPI peripheral to enable */
+void enableSPI(SPI_TypeDef* SPIx);
 
 #endif
