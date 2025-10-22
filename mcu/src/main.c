@@ -13,10 +13,10 @@ Changes:*Added form features for the web to display LED status and temperature r
         *Added code to read temperature data from the DS1722 sensor over SPI.
 */
 
-
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include "main.h"
 
 /////////////////////////////////////////////////////////////////
@@ -46,20 +46,19 @@ int inString(char request[], char des[]) {
 	return -1;
 }
 
-int updateLEDStatus(char request[])
+bool updateLEDStatus(char request[], bool currLED)
 {
-	int led_status = 0;
 	// The request has been received. now process to determine whether to turn the LED on or off
 	if (inString(request, "ledoff")==1) {
 		digitalWrite(LED_PIN, PIO_LOW);
-		led_status = 0;
+		currLED = 0;
 	}
 	else if (inString(request, "ledon")==1) {
 		digitalWrite(LED_PIN, PIO_HIGH);
-		led_status = 1;
+		currLED = 1;
 	}
 
-	return led_status;
+	return currLED;
 }
 
 /////////////////////////////////////////////////////////////////
@@ -83,39 +82,39 @@ float readTemperatureSPI(uint8_t msb, uint8_t lsb){
 float updateTemperature(char request[]) {
     if (inString(request, "8bit") == 1) {
         digitalWrite(CS, PIO_HIGH);
-        spiSendReceive(SPI1, 0x80);
-        spiSendReceive(SPI1, 0b11100000);
+        spiSendReceive(0x80);
+        spiSendReceive(0b11100000);
         digitalWrite(CS, PIO_LOW);
     } else if (inString(request, "9bit") == 1) {
         digitalWrite(CS, PIO_HIGH);
-        spiSendReceive(SPI1, 0x80);
-        spiSendReceive(SPI1, 0b11100010);
+        spiSendReceive(0x80);
+        spiSendReceive(0b11100010);
         digitalWrite(CS, PIO_LOW);
     } else if (inString(request, "10bit") == 1) {
         digitalWrite(CS, PIO_HIGH);
-        spiSendReceive(SPI1, 0x80);
-        spiSendReceive(SPI1, 0b11100100);
+        spiSendReceive(0x80);
+        spiSendReceive(0b11100100);
         digitalWrite(CS, PIO_LOW);
     } else if (inString(request, "11bit") == 1) {
         digitalWrite(CS, PIO_HIGH);
-        spiSendReceive(SPI1, 0x80);
-        spiSendReceive(SPI1, 0b11100110);
+        spiSendReceive(0x80);
+        spiSendReceive(0b11100110);
         digitalWrite(CS, PIO_LOW);
     } else if (inString(request, "12bit") == 1) {
         digitalWrite(CS, PIO_HIGH);
-        spiSendReceive(SPI1, 0x80);
-        spiSendReceive(SPI1, 0b11101000);
+        spiSendReceive(0x80);
+        spiSendReceive(0b11101000);
         digitalWrite(CS, PIO_LOW);
     }
     // Read temperature bits
     digitalWrite(CS, PIO_HIGH);
-    spiSendReceive(SPI1, 0x01);
-    uint8_t msb = spiSendReceive(SPI1, 0x00);
+    spiSendReceive(0x01);
+    uint8_t lsb = spiSendReceive(0x00);
     digitalWrite(CS, PIO_LOW);
 
     digitalWrite(CS, PIO_HIGH);
-    spiSendReceive(SPI1, 0x02);
-    uint8_t lsb = spiSendReceive(SPI1, 0x00);
+    spiSendReceive(0x02);
+    uint8_t msb = spiSendReceive(0x00);
     digitalWrite(CS, PIO_LOW);
 
     return readTemperatureSPI(msb, lsb); // return temperature as float
@@ -146,18 +145,21 @@ int main(void) {
     digitalWrite(CS, PIO_LOW);
 
     // Configure alternate function
-    GPIOA->AFR[0] &= ~((0xF << GPIO_AFRL_AFSEL5_Pos) | (0xF << GPIO_AFRL_AFSEL6_Pos));
-    GPIOA->AFR[1] &= ~(0xF << GPIO_AFRH_AFSEL12_Pos);
-    GPIOA->AFR[0] |=  (0b0101 << GPIO_AFRL_AFSEL5_Pos) | (0b0101 << GPIO_AFRL_AFSEL6_Pos);
-    GPIOA->AFR[1] |=  (0b0101 << GPIO_AFRH_AFSEL12_Pos); 
-
+    GPIOB->AFR[0] &= ~((0xF << GPIO_AFRL_AFSEL3_Pos) | // Clear bits
+                       (0xF << GPIO_AFRL_AFSEL4_Pos) |
+                       (0xF << GPIO_AFRL_AFSEL5_Pos));
+    GPIOB->AFR[0] |=  (0x5 << GPIO_AFRL_AFSEL3_Pos) |   // PB3 SCK
+                      (0x5 << GPIO_AFRL_AFSEL4_Pos) |   // PB4 MISO
+                      (0x5 << GPIO_AFRL_AFSEL5_Pos);    // PB5 MOSI
+    
+    // Enable and configure MCU SPI1
     enableSPI(SPI1);
-    initSPI(SPI1, 255, 0, 1); 
+    initSPI(SPI1, 0b111, 0, 1); 
 
     // Configure DS1722 SPI connection
     digitalWrite(CS, PIO_HIGH);
-    spiSendReceive(SPI1, 0x80);
-    spiSendReceive(SPI1, 0xE8);
+    spiSendReceive(0x80);
+    spiSendReceive(0xE8);
     digitalWrite(CS, PIO_LOW);
 
     while(1) {
@@ -180,13 +182,14 @@ int main(void) {
         /////////////////////////////// SPI temperature reading code /////////////////////////////////////////
         // Record ambient temperature
         float ambTemp = updateTemperature(request);
-        char tempReq [BUFF_LEN];
+        char tempReq [40];
 
-        sprintf(tempReq, "The ambient temperature is: %f°C\n", ambTemp);
+        // sprintf(tempReq, "The ambient temperature is: %f&deg;C\n", ambTemp);
+        sprintf(tempReq,"The ambient temperature is: %.4f&deg;C", ambTemp);
       
         // Update string with current LED state
       
-        int led_status = updateLEDStatus(request);
+        int led_status = updateLEDStatus(request, led_status);
       
         char ledStatusStr[20];
         if (led_status == 1)

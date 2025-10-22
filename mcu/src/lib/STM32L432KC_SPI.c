@@ -4,53 +4,48 @@
 // 17/10/2025
 // SPI functions for MCU
 
+#include "STM32L432KC.h"
 #include "STM32L432KC_SPI.h"
+#include "STM32L432KC_GPIO.h"
+#include "STM32L432KC_RCC.h"
 
 void initSPI(SPI_TypeDef* SPIx, int br, int cpol, int cpha) {
-    // reset CR1 & CR2 registers
+    // Known baseline
     SPIx->CR1 = 0;
     SPIx->CR2 = 0;
 
-    // Configure baud rate
-    SPIx->CR1 &= ~SPI_CR1_BR_Msk; 
+    // Baud, mode, polarity/phase
     SPIx->CR1 |= _VAL2FLD(SPI_CR1_BR, br);
+    SPIx->CR1 |= SPI_CR1_MSTR;
+    SPIx->CR1 &= ~(SPI_CR1_LSBFIRST | SPI_CR1_CRCEN);
+    SPIx->CR1 |= _VAL2FLD(SPI_CR1_CPOL, cpol) | _VAL2FLD(SPI_CR1_CPHA, cpha);
 
-    // Configure cpol and cpha
-    SPIx->CR1 &= ~(SPI_CR1_CPOL_Msk | SPI_CR1_CPHA_Msk);
-    SPIx->CR1 |= _VAL2FLD(SPI_CR1_CPOL, cpol);
-    SPIx->CR1 |= _VAL2FLD(SPI_CR1_CPHA, cpha);
+    // Software NSS
+    SPIx->CR1 |= (SPI_CR1_SSM | SPI_CR1_SSI);
 
-    // SPI behaviour configuration
-    SPIx->CR1 |= SPI_CR1_MSTR; // Set MCU SPI as Master
+    // 8-bit frames, Motorola, RX thresh = 8-bit
+    SPIx->CR2 |= (7U << SPI_CR2_DS_Pos) | SPI_CR2_FRXTH;
+    SPIx->CR2 &= ~SPI_CR2_FRF;      // Motorola
+    SPIx->CR2 |= SPI_CR2_SSOE;   // only if using hardware NSS
 
-    SPIx->CR1 &= ~SPI_CR1_LSBFIRST; // bit order into the DS1722 is MSB first
-    SPIx->CR1 &= ~SPI_CR1_CRCEN;
-
-    // Software CS
-    SPIx->CR1 |= SPI_CR1_SSM;
-    SPIx->CR1 |= SPI_CR1_SSI;
-
-    // Set data and SPI format
-    SPIx->CR2 |= (7 << SPI_CR2_DS_Pos);
-    SPIx->CR2 |= SPI_CR2_SSOE;
-    SPIx->CR2 &= ~SPI_CR2_FRF;
-    SPIx->CR2 |= SPI_CR2_FRXTH; // Set FIFO reception threshold
-    
-    // SPI enable
-    SPIx->CR1 &= ~SPI_CR1_SPE;
+    // Enable
     SPIx->CR1 |= SPI_CR1_SPE;
-}   
+}
 
-char spiSendReceive(SPI_TypeDef* SPIx, char send) {
-    // Wait until TXE flag is set
-    while (!(SPIx->SR & SPI_SR_TXE));
+/* Transmits a character (1 byte) over SPI and returns the received character.
+ *    -- send: the character to send over SPI
+ *    -- return: the character received over SPI */
+char spiSendReceive(char send) {
+    // Wait until TXE flag is set 
+    while(!(SPI1->SR & SPI_SR_TXE));
 
-    SPIx->DR = send; // Send data
-
-    // Wait until RXNE flag is set
-    while (!(SPIx->SR & SPI_SR_RXNE));
-
-    return (char)(SPIx->DR); // Read and return received data
+    *(volatile char *) (&SPI1->DR) = send; // Send data over SPI
+    
+    // Wait until RXNE flag is set (Data is received)
+    while(!(SPI1->SR & SPI_SR_RXNE));
+    
+    char rec = (volatile char) SPI1->DR; // Read received data 
+    return rec; // Return received data
 }
 
 void enableSPI(SPI_TypeDef* SPIx) {

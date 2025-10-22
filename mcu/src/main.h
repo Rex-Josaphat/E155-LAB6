@@ -13,14 +13,14 @@
 #ifndef MAIN_H
 #define MAIN_H
 
-#include "STM32L432KC.h"
+#include "D:\MicroPs\E155-Lab6\mcu\src\lib\STM32L432KC.h"
 
-#define LED_PIN PB3 // LED pin for blinking on Port B pin 3
+#define LED_PIN PA6 // LED pin for blinking on Port B pin 3
 #define BUFF_LEN 32
-#define SCK PA5
-#define MOSI PA12
-#define MISO PA6
-#define CS PB1
+#define SCK PB3
+#define MOSI PB5
+#define MISO PB4
+#define CS PA11
 #define USART_RX PA10
 #define USART_TX PA9
 

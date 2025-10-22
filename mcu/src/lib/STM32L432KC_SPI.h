@@ -4,11 +4,17 @@
 // 17/10/2025
 // Header file for SPI functions for MCU
 
+
 #ifndef STM32L4_SPI_H
 #define STM32L4_SPI_H
 
 #include <stdint.h>
 #include <stm32l432xx.h>
+
+///////////////////////////////////////////////////////////////////////////////
+// Definitions
+///////////////////////////////////////////////////////////////////////////////
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // Function prototypes
@@ -21,11 +27,12 @@
  *          1: data changed on leading edge of clk and captured on next edge)
  * Refer to the datasheet for more low-level details. */ 
 void initSPI(SPI_TypeDef* SPIx, int br, int cpol, int cpha);
+// void initSPI(int br, int cpol, int cpha);
 
 /* Transmits a character (1 byte) over SPI and returns the received character.
  *    -- send: the character to send over SPI
  *    -- return: the character received over SPI */
-char spiSendReceive(SPI_TypeDef* SPIx, char send);
+char spiSendReceive(char send);
 
 /* Enables the clock for the specified SPI peripheral: SPI1 (APB2 peripheral) or SPI3(APB1 peripheral).
  *    -- SPI: pointer to the SPI peripheral to enable */
