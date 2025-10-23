@@ -15,7 +15,7 @@
 
 #include "D:\MicroPs\E155-Lab6\mcu\src\lib\STM32L432KC.h"
 
-#define LED_PIN PA6 // LED pin for blinking on Port B pin 3
+#define LED_PIN PA6 // LED pin for blinking on Port A pin 6
 #define BUFF_LEN 32
 #define SCK PB3
 #define MOSI PB5
