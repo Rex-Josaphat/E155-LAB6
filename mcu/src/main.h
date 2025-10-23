@@ -7,7 +7,7 @@
     Modified by: Josaphat Ngoga
     Email: jngoga@g.hmc.edu
     Date: 17/10/2025
-    Changes:Added new definitions for SPI and USART communication pins.
+    Changes: Added new definitions for SPI and USART communication pins.
 */
 
 #ifndef MAIN_H

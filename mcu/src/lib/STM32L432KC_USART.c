@@ -58,7 +58,7 @@ USART_TypeDef * initUSART(int USART_ID, int baud_rate) {
     USART->CR1 &= ~USART_CR1_OVER8; // Set to 16 times sampling freq
     USART->CR2 &= ~USART_CR2_STOP;  // 0b00 corresponds to 1 stop bit
 
-    // Set baud rate to 115200 (see RM 38.5.4 for details)
+    // Set baud rate to 115200 (see RM 3 8.5.4 for details)
     // Tx/Rx baud = f_CK/USARTDIV (since oversampling by 16)
     // f_CK = 16 MHz (HSI)
 

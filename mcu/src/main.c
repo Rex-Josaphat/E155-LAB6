@@ -10,7 +10,8 @@ Date: 17/10/2025
 Changes:*Added form features for the web to display LED status and temperature reading
         from the DS1722 temperature sensor via SPI communication.
         *Added SPI initialization code for communication with the DS1722 sensor.
-        *Added code to read temperature data from the DS1722 sensor over SPI.
+        *Added code to read temperature data (float) from the DS1722 sensor over SPI.
+        *Modified webpage display format to implement HTML5 and styling
 */
 
 #include <string.h>
@@ -19,26 +20,63 @@ Changes:*Added form features for the web to display LED status and temperature r
 #include <stdbool.h>
 #include "main.h"
 
+
+//////////////////////////////// Web Sever Webpage///////////////////////////////////////////
+char* webpageStart =
+"<!DOCTYPE html><html><head><meta charset=\"utf-8\">"
+"<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">"
+"<title>E155 Web Server Demo</title>"
+// CSS
+"<style>"
+"  :root{--bg:#f6f7fb;--card:#ffffff;--text:#0f172a;--muted:#64748b;"
+"        --accent:#2563eb;--accent2:#0ea5e9;--ring:rgba(37,99,235,.25);}"
+"  *{box-sizing:border-box} body{margin:0;font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;color:var(--text);background:var(--bg);}"
+"  .wrap{max-width:720px;margin:32px auto;padding:0 16px}"
+"  .card{background:var(--card);border-radius:16px;padding:24px 20px;box-shadow:0 10px 30px rgba(0,0,0,.06);} "
+"  h1{font-size:32px;margin:0 0 8px}"
+"  h2{font-size:22px;margin:24px 0 8px}"
+"  p{margin:8px 0;color:var(--muted)}"
+"  .row{display:flex;flex-wrap:wrap;gap:10px;margin:10px 0 6px}"
+"  .btn{appearance:none;border:0;border-radius:10px;padding:10px 14px;font-weight:600;cursor:pointer;}"
+"  .btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;}"
+"  .btn-secondary{background:#e5e7eb;color:#111827}"
+"  .btn:focus,.btn:hover{outline:0;box-shadow:0 0 0 4px var(--ring)}"
+"  .stat{font-size:18px;color:var(--text);margin-top:6px}"
+"  .footer{margin-top:18px;font-size:12px;color:var(--muted)}"
+"</style>"
+// Webpage Content 
+"</head><body><div class=\"wrap\"><div class=\"card\">"
+"<h1>E155 Web Server Webpage</h1>"
+"<p>Onboard LED Control and read temperature from DS1722 sensor.</p>";
+
+// LED status dispaly and controls
+char* ledStr =
+"<h2>LED Control</h2>"
+"<div class=\"row\">"
+"  <form action=\"ledon\"><input class=\"btn btn-primary\" type=\"submit\" value=\"Turn LED On\"></form>"
+"  <form action=\"ledoff\"><input class=\"btn btn-secondary\" type=\"submit\" value=\"Turn LED Off\"></form>"
+"</div>";
+
 /////////////////////////////////////////////////////////////////
 // Provided Constants and Functions
 /////////////////////////////////////////////////////////////////
 
-//Defining the web page in two chunks: everything before the current time, and everything after the current time
-char* webpageStart = "<!DOCTYPE html><html><head><title>E155 Web Server Demo Webpage</title>\
-	<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\
-	</head>\
-	<body><h1>E155 Web Server Demo Webpage</h1>";
-char* ledStr = "<p>LED Control:</p><form action=\"ledon\"><input type=\"submit\" value=\"Turn the LED on!\"></form>\
-	<form action=\"ledoff\"><input type=\"submit\" value=\"Turn the LED off!\"></form>";
+// Temperature display and controls
+char* tempPageForm =
+"<h2>Ambient Temperature</h2>"
+"<p>Measured Ambient Temperature:</p>"
+"<div class=\"row\">"
+"  <form action=\"8bit\"><input class=\"btn btn-secondary\" type=\"submit\" value=\"8 Bit\"></form>"
+"  <form action=\"9bit\"><input class=\"btn btn-secondary\" type=\"submit\" value=\"9 Bit\"></form>"
+"  <form action=\"10bit\"><input class=\"btn btn-secondary\" type=\"submit\" value=\"10 Bit\"></form>"
+"  <form action=\"11bit\"><input class=\"btn btn-secondary\" type=\"submit\" value=\"11 Bit\"></form>"
+"  <form action=\"12bit\"><input class=\"btn btn-secondary\" type=\"submit\" value=\"12 Bit\"></form>"
+"</div>";
 
-char* tempPageForm = "<p>Measured Ambient Temperature:</p>\
-    <form action=\"8bit\"><input type=\"submit\" value=\"8 Bit Resolution\"></form>\
-    <form action=\"9bit\"><input type=\"submit\" value=\"9 Bit Resolution\"></form>\
-    <form action=\"10bit\"><input type=\"submit\" value=\"10 Bit Resolution\"></form>\
-    <form action=\"11bit\"><input type=\"submit\" value=\"11 Bit Resolution\"></form>\
-    <form action=\"12bit\"><input type=\"submit\" value=\"12 Bit Resolution\"></form>";
-
-char* webpageEnd   = "</body></html>";
+// Closing tag
+char* webpageEnd =
+"<div class=\"footer\">Modified from original demo webpage by Josaphat Ngoga.</div>"
+"</div></div></body></html>";
 
 //determines whether a given character sequence is in a char array request, returning 1 if present, -1 if not present
 int inString(char request[], char des[]) {
@@ -184,8 +222,7 @@ int main(void) {
         float ambTemp = updateTemperature(request);
         char tempReq [40];
 
-        // sprintf(tempReq, "The ambient temperature is: %f&deg;C\n", ambTemp);
-        sprintf(tempReq,"The ambient temperature is: %.4f&deg;C", ambTemp);
+        sprintf(tempReq, "The ambient temperature is: %.4f&deg;C", ambTemp);
       
         // Update string with current LED state
       
@@ -201,14 +238,12 @@ int main(void) {
         sendString(USART, webpageStart); // webpage header code
         sendString(USART, ledStr); // button for controlling LED
       
-        sendString(USART, "<h2>LED Status</h2>");
-        sendString(USART, "<p>");
+        sendString(USART, "<h2>LED Status</h2><p class=\"stat\">");
         sendString(USART, ledStatusStr);
         sendString(USART, "</p>");
 
-        sendString(USART, "<h2>Ambient Temperature</h2>");
         sendString(USART, tempPageForm);
-        sendString(USART, "<p>");
+        sendString(USART, "<p class=\"stat\">");
         sendString(USART, tempReq);
         sendString(USART, "</p>");
 

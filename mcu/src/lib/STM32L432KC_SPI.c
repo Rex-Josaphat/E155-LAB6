@@ -10,31 +10,28 @@
 #include "STM32L432KC_RCC.h"
 
 void initSPI(SPI_TypeDef* SPIx, int br, int cpol, int cpha) {
-    // Known baseline
+    // reset CR1 & CR2 registers
     SPIx->CR1 = 0;
     SPIx->CR2 = 0;
 
-    // Baud, mode, polarity/phase
+    // Configure baud, mode, polarity, and phase
     SPIx->CR1 |= _VAL2FLD(SPI_CR1_BR, br);
     SPIx->CR1 |= SPI_CR1_MSTR;
     SPIx->CR1 &= ~(SPI_CR1_LSBFIRST | SPI_CR1_CRCEN);
     SPIx->CR1 |= _VAL2FLD(SPI_CR1_CPOL, cpol) | _VAL2FLD(SPI_CR1_CPHA, cpha);
 
-    // Software NSS
+    // Software CS
     SPIx->CR1 |= (SPI_CR1_SSM | SPI_CR1_SSI);
 
-    // 8-bit frames, Motorola, RX thresh = 8-bit
-    SPIx->CR2 |= (7U << SPI_CR2_DS_Pos) | SPI_CR2_FRXTH;
-    SPIx->CR2 &= ~SPI_CR2_FRF;      // Motorola
-    SPIx->CR2 |= SPI_CR2_SSOE;   // only if using hardware NSS
+    // Set data and SPI format
+    SPIx->CR2 |= (7U << SPI_CR2_DS_Pos) | SPI_CR2_FRXTH;  // Set FIFO reception threshold
+    SPIx->CR2 &= ~SPI_CR2_FRF;
+    SPIx->CR2 |= SPI_CR2_SSOE;
 
     // Enable
     SPIx->CR1 |= SPI_CR1_SPE;
 }
 
-/* Transmits a character (1 byte) over SPI and returns the received character.
- *    -- send: the character to send over SPI
- *    -- return: the character received over SPI */
 char spiSendReceive(char send) {
     // Wait until TXE flag is set 
     while(!(SPI1->SR & SPI_SR_TXE));
